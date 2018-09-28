@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/actgardner/gogen-avro/generator"
+	"github.com/kr/pretty"
 )
 
 const UTIL_FILE = "primitive.go"
@@ -32,16 +33,18 @@ type Schema struct {
 //  Namespace is a mapping of QualifiedNames to their Definitions, used to resolve
 //  type lookups within a schema.
 type Namespace struct {
-	Definitions map[QualifiedName]Definition
-	Schemas     []Schema
-	ShortUnions bool
+	Definitions               map[QualifiedName]Definition
+	Schemas                   []Schema
+	ShortUnions               bool
+	DefinitionCompareOnlyName bool // In case, we would like to check only the name and namespace of the schema
 }
 
-func NewNamespace(shortUnions bool) *Namespace {
+func NewNamespace(shortUnions bool, definitionCompareOnlyName bool) *Namespace {
 	return &Namespace{
-		Definitions: make(map[QualifiedName]Definition),
-		Schemas:     make([]Schema, 0),
-		ShortUnions: shortUnions,
+		Definitions:               make(map[QualifiedName]Definition),
+		Schemas:                   make([]Schema, 0),
+		ShortUnions:               shortUnions,
+		DefinitionCompareOnlyName: definitionCompareOnlyName,
 	}
 }
 
@@ -66,8 +69,22 @@ func (namespace *Namespace) AddToPackage(p *generator.Package, headerComment str
 // Add a new type definition to the namespace. Returns an error if the type is already defined.
 func (n *Namespace) RegisterDefinition(d Definition) error {
 	if curDef, ok := n.Definitions[d.AvroName()]; ok {
-		if !reflect.DeepEqual(curDef, d) {
-			return fmt.Errorf("Conflicting definitions for %v", d.AvroName())
+		if n.DefinitionCompareOnlyName {
+			if !reflect.DeepEqual(curDef.AvroName(), d.AvroName()) && !reflect.DeepEqual(curDef.Aliases(), d.Aliases()) {
+				diffs := pretty.Diff(curDef, d)
+				for _, diff := range diffs {
+					fmt.Println(diff)
+				}
+				return fmt.Errorf("Conflicting definitions for %v", d.AvroName())
+			}
+		} else {
+			if !reflect.DeepEqual(curDef, d) {
+				diffs := pretty.Diff(curDef, d)
+				for _, diff := range diffs {
+					fmt.Println(diff)
+				}
+				return fmt.Errorf("Conflicting definitions for %v", d.AvroName())
+			}
 		}
 	}
 	n.Definitions[d.AvroName()] = d
@@ -190,7 +207,6 @@ func (n *Namespace) decodeRecordDefinition(namespace string, schemaMap map[strin
 	if err != nil {
 		return nil, err
 	}
-
 	return NewRecordDefinition(ParseAvroName(namespace, name), aliases, decodedFields, schemaMap), nil
 }
 
@@ -282,7 +298,7 @@ func (n *Namespace) decodeUnionDefinition(name, namespace string, fieldList []in
 		unionFields = append(unionFields, fieldDef)
 	}
 
-	if (n.ShortUnions) {
+	if n.ShortUnions {
 		name += "Union"
 	} else {
 		name = ""

@@ -15,6 +15,7 @@ import (
 func main() {
 	packageName := flag.String("package", "avro", "Name of generated package")
 	containers := flag.Bool("containers", false, "Whether to generate container writer methods")
+	definitionCompareOnlyName := flag.Bool("onlyname", false, "In case, we would like to check only the name and namespace of the schema")
 	shortUnions := flag.Bool("short-unions", false, "Whether to use shorter names for Union types")
 
 	flag.Parse()
@@ -28,7 +29,7 @@ func main() {
 
 	var err error
 	pkg := generator.NewPackage(*packageName)
-	namespace := types.NewNamespace(*shortUnions)
+	namespace := types.NewNamespace(*shortUnions, *definitionCompareOnlyName)
 
 	for _, fileName := range files {
 		schema, err := ioutil.ReadFile(fileName)
