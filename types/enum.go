@@ -2,6 +2,7 @@ package types
 
 import (
 	"fmt"
+
 	"github.com/actgardner/gogen-avro/generator"
 )
 
@@ -70,7 +71,7 @@ func (e *EnumDefinition) GoType() string {
 func (e *EnumDefinition) typeList() string {
 	typeStr := ""
 	for i, t := range e.symbols {
-		typeStr += fmt.Sprintf("%v %v = %v\n", generator.ToPublicName(t), e.GoType(), i)
+		typeStr += fmt.Sprintf("%v %v = %v\n", e.GoType()+"_"+generator.ToPublicName(t), e.GoType(), i)
 	}
 	return typeStr
 }
@@ -78,7 +79,7 @@ func (e *EnumDefinition) typeList() string {
 func (e *EnumDefinition) stringerList() string {
 	stringerStr := ""
 	for _, t := range e.symbols {
-		stringerStr += fmt.Sprintf("case %v:\n return %q\n", generator.ToPublicName(t), t)
+		stringerStr += fmt.Sprintf("case %v:\n return %q\n", e.GoType()+"_"+generator.ToPublicName(t), t)
 	}
 	return stringerStr
 }
